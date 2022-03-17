@@ -666,26 +666,26 @@ export const arenaTrainers: ArenaTrainer[] = [
     },
 ]
 
-export function getRandomArenaTrainer(previousNames: string[] = [], leagueLevel: number = 0): ArenaTrainer {
+export function getRandomArenaTrainer(previousNames: string[] = [], leagueLevel: number = 0, isAdmin: boolean = false): ArenaTrainer {
     let options: ArenaTrainer[] = []
     // Start with rank 1 only
     options = options.concat(...arenaTrainers.filter(t => t.rank === 1))
-    if (leagueLevel > 10) {
+    if (leagueLevel > 10 || isAdmin) {
         // Add rank 2
         options = options.concat(...arenaTrainers.filter(t => t.rank === 2))
     }
-    if (leagueLevel > 20) {
+    if (leagueLevel > 20 || isAdmin) {
         // Add rank 3
         options = options.concat(...arenaTrainers.filter(t => t.rank === 3))
     }
-    if (leagueLevel > 30) {
+    if (leagueLevel > 30 || isAdmin) {
         // Make rank 2 more common
         options = options.concat(...arenaTrainers.filter(t => t.rank === 2))
 
         // Make rank 3 more common
         options = options.concat(...arenaTrainers.filter(t => t.rank === 3))
     }
-    if (leagueLevel > 35) {
+    if (leagueLevel > 35 || isAdmin) {
         // Make rank 3 more common
         options = options.concat(...arenaTrainers.filter(t => t.rank === 3))
     }

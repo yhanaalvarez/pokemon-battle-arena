@@ -140,7 +140,7 @@ export function createArenaBattle(user: User): Battle {
     remainingReflectTurns: 0,
   }
 
-  const arenaTrainer = getRandomArenaTrainer(user.previousArenaTrainers, user.leagueLevel)
+  const arenaTrainer = getRandomArenaTrainer(user.previousArenaTrainers, user.leagueLevel, user.isAdmin)
   addPreviousArenaTrainer(user, arenaTrainer.name)
 
   const cpuPlayer: Player = {
