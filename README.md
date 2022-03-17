@@ -11,7 +11,7 @@ A browser-based Pokémon battle game.
 * TypeScript on both FE and BE
 
 ## To Run
-1. Make sure you have a PostgreSQL installed
+1. Make sure you have PostgreSQL installed
 2. Create a database called `pmba`
 3. Create a file called `.env` in the root of this project with your database config:
 ```
