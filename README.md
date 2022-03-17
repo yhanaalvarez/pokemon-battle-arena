@@ -15,7 +15,7 @@ A browser-based Pokémon battle game.
 2. Create a database called `pmba`
 3. Create a file called `.env` in the root of this project with your database config:
 ```
-DATABASE_URL=postgresql://<USER>:<PASSWORD>@localhost:6666/pmba
+DATABASE_URL=postgresql://<USER>:<PASSWORD>@localhost:5432/pmba
 DATABASE_USE_SSL=false
 ```
 4. Build and start the app
