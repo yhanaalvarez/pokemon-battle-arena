@@ -18,7 +18,7 @@ export class MainMenuComponent extends BaseComponent<{}> {
       <div class="container mx-auto px-4">
         <img class="h-28 mx-auto mt-10" src="/img/pokemon_logo.png" alt="pokemon"/>
         <h1 class="text-center text-2xl mt-8 px-4">
-          BATTLE ARENA
+          PUKEv1.0
         </h1>
         <div $if="!loading" class="mt-10">
           <div $if="nestedRoute('/')">
@@ -26,7 +26,8 @@ export class MainMenuComponent extends BaseComponent<{}> {
             <main-menu-button-component text="POKEDEX" route="/pokedex"></main-menu-button-component>
             <main-menu-button-component $if="!loggedIn" text="LOG IN" route="/login"></main-menu-button-component>
             <main-menu-button-component $if="loggedIn" text="SETTINGS" route="/settings"></main-menu-button-component>
-            <main-menu-button-component text="ABOUT" route="/about"></main-menu-button-component>
+            <main-menu-button-component text="JOIN CHAT" isExternal="true" route="https://m.me/j/AbaX1xsn4_O14atW/"></main-menu-button-component> 
+            
           </div>
           <div $if="nestedRoute('/play')">
             <main-menu-button-component text="SINGLE PLAYER" :action="selectSinglePlayer"></main-menu-button-component>
@@ -46,14 +47,6 @@ export class MainMenuComponent extends BaseComponent<{}> {
           </div>
           <multi-player-resume-component $if="nestedRoute('/multiplayer/resume')">
           </multi-player-resume-component>
-          <div $if="nestedRoute('/about')">
-            <h2 class="text-center text-xl mt-6">Patch Notes:</h2>
-            <p class="text-center mt-4"><strong>V1</strong> Rebalance fix pokemon moves</p>
-            <h2 class="text-center text-xl mt-6">Developer Socials:</h2>
-            <p class="text-center mt-4">Name: Leechshares</p>
-            <p class="text-center mt-2"><a href="https://fb.com/leechshares" target="_blank">Fb page: https://fb.com/leechshares</a></p>
-            <main-menu-button-component text="BACK" route="/"></main-menu-button-component>
-          </div>
         </div>
       </div>
     </div>
@@ -143,8 +136,10 @@ class MultiPlayerResumeComponent extends BaseComponent<{}> {
 }
 
 class MainMenuButtonComponent extends BaseComponent<{
-  route: string,
-  action: () => void
+  route?: string,
+  isExternal?: boolean,
+  action?: () => void,
+  text: string
 }> {
   template = /*html*/ `
     <div class="flex flex-row justify-center mt-6">
@@ -154,7 +149,9 @@ class MainMenuButtonComponent extends BaseComponent<{
     </div>
   `
   handleClick() {
-    if (this.props.route) {
+    if (this.props.isExternal) {
+      window.open(this.props.route, '_blank')
+    } else if (this.props.route) {
       this.$router.goTo(this.props.route)
     }
   }
