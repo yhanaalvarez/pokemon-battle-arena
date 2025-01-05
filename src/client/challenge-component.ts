@@ -20,7 +20,7 @@ export class ChallengeComponent extends BaseComponent<{
       <div $if="view == 'RECEIVER'">
         <img class="h-28 mx-auto mt-10" src="/img/pokemon_logo.png" alt="pokemon"/>
         <h1 class="main-menu text-center text-2xl mt-8 px-4">
-          BATTLE ARENA
+          PvP
         </h1>
         <div id="avatar-display" class="mt-5 mb-8">
           <img class="h-32 mx-auto" src="/sprites/trainers/{{challenge.challengerAvatar.toLowerCase()}}.png">
@@ -36,15 +36,25 @@ export class ChallengeComponent extends BaseComponent<{
         </div>
       </div>
 
-
       <div $if="view == 'CHALLENGER'">
-        <h1 class="text-center text-xl m-2">CHALLENGE A FRIEND</h1>
-        <h2 class="text-center text-lg mt-5 cursor-pointer">Challenge ID: {{props.routeParams.challengeId}}</h2>
-        <p class="text-center mt-5">Send this URL to a friend to challenge them to a Pokemon battle!</p>
-        <p class="text-center mt-5">You can click the URL below to copy it to your clipboard:</p>
-        <p class="text-center cursor-pointer text-blue-600" @click="copyUrl">{{url}}</p>
-        <p $if="showCopiedMsg" class="text-center">Copied!</p>
-        <p class="text-center mt-5">After they accept this page will reload and start the battle automatically.</p>
+        <img class="h-28 mx-auto mt-10" src="/img/pokemon_logo.png" alt="pokemon"/>
+        <h1 class="main-menu text-center text-2xl mt-8 px-4">
+          PvP
+        </h1>
+        <div id="avatar-display" class="mt-5 mb-8">
+          <img class="h-32 mx-auto" src="/sprites/trainers/{{challenge.challengerAvatar.toLowerCase()}}.png">
+        </div>
+        <terminal-component></terminal-component>
+        <div class="grid grid-cols-2 gap-1">
+          <div @click="shareChallenge" class="ml-1 mt-2 h-16 cursor-pointer bg-gray-100 text-center text-lg pt-3 rounded border-2 border-solid border-black">
+            Share
+          </div>
+          <div @click="rejectChallenge" class="mr-1 mt-2 h-16 cursor-pointer bg-gray-100 text-center text-lg pt-3 rounded border-2 border-solid border-black">
+            Cancel
+          </div>
+        </div>
+        <p class="text-center mt-2">Challenger is waiting for rival...</p>
+        <p $if="showCopiedMsg" class="text-center mt-2">Copied!</p>
       </div>
 
     </div>
@@ -60,6 +70,10 @@ export class ChallengeComponent extends BaseComponent<{
       this.challenge = await getChallenge(challengeId)
       if (loggedInUser && this.challenge.challengerName === loggedInUser.username) {
         this.view = 'CHALLENGER'
+        await this.$controller.publish({
+          type: 'DISPLAY_MESSAGE',
+          message: `Challenger is waiting for rival...`
+        })
         this.poll()
       } else {
         this.view = 'RECEIVER'
@@ -105,15 +119,44 @@ export class ChallengeComponent extends BaseComponent<{
     this.$router.goTo('/')
   }
 
-  copyUrl() {
-    var dummy = document.createElement('input'),
-    text = window.location.href;
-    document.body.appendChild(dummy);
-    dummy.value = text;
-    dummy.select();
-    document.execCommand('copy');
-    document.body.removeChild(dummy);
-    this.showCopiedMsg = true
+  async shareChallenge() {
+    try {
+      // Copy URL to clipboard
+      const url = window.location.href;
+      await navigator.clipboard.writeText(url);
+      this.showCopiedMsg = true;
+
+      // Send message to chat room
+      const loggedInUser = await tryToGetUser();
+      const challengeId = this.props.routeParams.challengeId;
+
+      if (loggedInUser && challengeId) {
+        const message = `${loggedInUser.username} wants to challenge you: ${url}`;
+        await sendMessageToChatRoom('pba125', 'SYSTEM', message);
+        console.log('Message sent successfully');
+      } else {
+        console.error('Failed to send message: User not logged in or challengeId not available.');
+      }
+    } catch (error) {
+      console.error('Error sharing challenge:', error.message);
+    }
   }
-  
+}
+
+async function sendMessageToChatRoom(chatroomId: string, username: string, message: string) {
+  const url = `http://158.101.198.227:8534/api/chat?chatroom_id=${encodeURIComponent(chatroomId)}&username=${encodeURIComponent(username)}&message=${encodeURIComponent(message)}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send message');
+    }
+
+    console.log('Message sent successfully');
+  } catch (error) {
+    console.error('Error sending message:', error.message);
+  }
 }
