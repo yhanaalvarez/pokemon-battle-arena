@@ -26,6 +26,7 @@ export class MainMenuComponent extends BaseComponent<{}> {
             <main-menu-button-component text="POKEDEX" route="/pokedex"></main-menu-button-component>
             <main-menu-button-component $if="!loggedIn" text="LOG IN" route="/login"></main-menu-button-component>
             <main-menu-button-component $if="loggedIn" text="SETTINGS" route="/settings"></main-menu-button-component>
+            <main-menu-button-component text="ABOUT" route="/about"></main-menu-button-component>
           </div>
           <div $if="nestedRoute('/play')">
             <main-menu-button-component text="SINGLE PLAYER" :action="selectSinglePlayer"></main-menu-button-component>
@@ -45,6 +46,14 @@ export class MainMenuComponent extends BaseComponent<{}> {
           </div>
           <multi-player-resume-component $if="nestedRoute('/multiplayer/resume')">
           </multi-player-resume-component>
+          <div $if="nestedRoute('/about')">
+            <h2 class="text-center text-xl mt-6">Patch Notes:</h2>
+            <p class="text-center mt-4"><strong>V1</strong> Rebalance fix pokemon moves</p>
+            <h2 class="text-center text-xl mt-6">Developer Socials:</h2>
+            <p class="text-center mt-4">Name: Leechshares</p>
+            <p class="text-center mt-2"><a href="https://fb.com/leechshares" target="_blank">Fb page: https://fb.com/leechshares</a></p>
+            <main-menu-button-component text="BACK" route="/"></main-menu-button-component>
+          </div>
         </div>
       </div>
     </div>
@@ -71,7 +80,7 @@ export class MainMenuComponent extends BaseComponent<{}> {
   async selectSinglePlayer() {
     const user = await getUser()
     if (user.singlePlayerBattleId) {
-      // User is already in a single player  battle
+      // User is already in a single player battle
       this.$router.goTo(`/battle/${user.singlePlayerBattleId}`)
     } else {
       this.$router.goTo(`/singleplayer`)
@@ -81,7 +90,7 @@ export class MainMenuComponent extends BaseComponent<{}> {
   async selectArena() {
     const user = await getUser()
     if (user.singlePlayerBattleId) {
-      // User is already in a single player  battle
+      // User is already in a single player battle
       this.$router.goTo(`/battle/${user.singlePlayerBattleId}`)
     } else {
       // User is not in a single player battle
@@ -97,7 +106,7 @@ export class MainMenuComponent extends BaseComponent<{}> {
   async selectPractice() {
     const user = await getUser()
     if (user.singlePlayerBattleId) {
-      // User is already in a single player  battle
+      // User is already in a single player battle
       this.$router.goTo(`/battle/${user.singlePlayerBattleId}`)
     } else {
       // User is not in a single player battle
