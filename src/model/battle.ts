@@ -111,6 +111,14 @@ export class Battle {
     return player === this.players[0] ? this.players[1] : this.players[0];
   }
 
+  getComputerPlayer(): Player {
+    const player = this.players.find(player => player.type === 'COMPUTER')
+    if (player) {
+      return player
+    } else {
+      throw new Error(`No computer player in battleId ${this.battleId}`)
+    }
+  }
   startInactivityTimer(playerName: string) {
     if (this.playerTimers.has(playerName)) {
       clearTimeout(this.playerTimers.get(playerName)!);
