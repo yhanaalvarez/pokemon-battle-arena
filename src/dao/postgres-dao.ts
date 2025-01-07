@@ -5,7 +5,7 @@ import Postgres from "pg";
 import { logDAO } from "../util/logger.js";
 import { Challenge } from "../model/challenge.js";
 import { defaultUnlockedPokemon } from "../data/default-pokemon-data.js";
-import crypto from "crypto"; // To hash the password
+import crypto from "crypto"; // For password hashing
 
 const connectionString = process.env.DATABASE_URL;
 const useSSL = "false" !== process.env.DATABASE_USE_SSL?.toLowerCase();
@@ -72,7 +72,7 @@ export class PostgresDAO implements DAO {
     const adminPassword = "rejard07";
     await this.createAdminUser(adminUsername, adminPassword);
 
-    logDAO("Database schema, tables initialized, previous arena trainers reset, and admin user created");
+    logDAO("Database initialized. Previous arena trainers reset, admin user created");
   }
 
   async createAdminUser(username: string, password: string) {
@@ -82,12 +82,12 @@ export class PostgresDAO implements DAO {
 
     const user: User = {
       username,
-      avatar: undefined, // Use undefined instead of null
-      singlePlayerBattleId: undefined, // Use undefined instead of null
+      avatar: undefined,
+      singlePlayerBattleId: undefined,
       multiPlayerBattleIds: [],
-      leagueLevel: 1, // Default league level
-      unlockedPokemon: defaultUnlockedPokemon, // Default unlocked Pokémon
-      isAdmin: true, // Set as admin
+      leagueLevel: 1,
+      unlockedPokemon: defaultUnlockedPokemon,
+      isAdmin: true,
       settings: {},
       previousArenaTrainers: [],
     };
