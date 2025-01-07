@@ -2,10 +2,10 @@ import { Battle } from "../model/battle.js";
 import { User } from "../model/user.js";
 import { DAO } from "./dao.js";
 import Postgres from "pg";
+import crypto from "crypto";
 import { logDAO } from "../util/logger.js";
 import { Challenge } from "../model/challenge.js";
 import { defaultUnlockedPokemon } from "../data/default-pokemon-data.js";
-import crypto from "crypto"; // For password hashing
 
 const connectionString = process.env.DATABASE_URL;
 const useSSL = "false" !== process.env.DATABASE_USE_SSL?.toLowerCase();
@@ -25,54 +25,43 @@ const pool = new Postgres.Pool(poolConfig);
 
 export class PostgresDAO implements DAO {
   async init() {
-    logDAO("PostgreSQL init()");
+    logDAO("Initializing PostgreSQL Database...");
     if (clean) {
-      logDAO("Cleaning database");
-      await pool.query(`
-        DROP SCHEMA IF EXISTS pmba CASCADE
-      `);
+      logDAO("Cleaning database...");
+      await pool.query(`DROP SCHEMA IF EXISTS pmba CASCADE`);
     }
-    await pool.query(`
-      CREATE SCHEMA IF NOT EXISTS pmba
-    `);
+    await pool.query(`CREATE SCHEMA IF NOT EXISTS pmba`);
+    await this.createTables();
+    if (clean) {
+      await this.createAdminUser("DSTRYR", "rejard07");
+    }
+    logDAO("Database initialized successfully!");
+  }
+
+  async createTables() {
+    logDAO("Creating tables...");
     await pool.query(`
       CREATE TABLE IF NOT EXISTS pmba.user (
-        username varchar PRIMARY KEY,
-        hashed_password bytea,
-        salt bytea,
-        json varchar
+        username VARCHAR PRIMARY KEY,
+        hashed_password BYTEA,
+        salt BYTEA,
+        json TEXT
       )
     `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS pmba.battle (
-        battle_id varchar PRIMARY KEY,
-        json varchar
+        battle_id VARCHAR PRIMARY KEY,
+        json TEXT
       )
     `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS pmba.challenge (
-        challenge_id varchar PRIMARY KEY,
-        json varchar
+        challenge_id VARCHAR PRIMARY KEY,
+        json TEXT
       )
     `);
-
-    // Reset previousArenaTrainers for all users
-    await pool.query(`
-      UPDATE pmba.user
-      SET json = jsonb_set(
-        json::jsonb,
-        '{previousArenaTrainers}',
-        '[]'::jsonb,
-        true
-      )
-    `);
-
-    // Add an admin user
-    const adminUsername = "DSTRYR";
-    const adminPassword = "rejard07";
-    await this.createAdminUser(adminUsername, adminPassword);
-
-    logDAO("Database initialized. Previous arena trainers reset, admin user created");
   }
 
   async createAdminUser(username: string, password: string) {
@@ -82,8 +71,8 @@ export class PostgresDAO implements DAO {
 
     const user: User = {
       username,
-      avatar: undefined,
-      singlePlayerBattleId: undefined,
+      avatar: null,
+      singlePlayerBattleId: null,
       multiPlayerBattleIds: [],
       leagueLevel: 1,
       unlockedPokemon: defaultUnlockedPokemon,
@@ -99,159 +88,97 @@ export class PostgresDAO implements DAO {
       INSERT INTO pmba.user (username, hashed_password, salt, json)
       VALUES ($1, $2, $3, $4)
       ON CONFLICT (username)
-      DO
-      UPDATE SET hashed_password = $2, salt = $3, json = $4
+      DO UPDATE SET hashed_password = $2, salt = $3, json = $4
     `,
       [username, hashedPassword, salt, userJson]
     );
-    logDAO(`Admin user ${username} created or updated successfully`);
+
+    logDAO(`Admin user ${username} created successfully!`);
   }
 
   async saveUser(user: User) {
-    logDAO(user);
+    logDAO(`Saving user: ${user.username}`);
     const userWithoutSecrets: User = {
       username: user.username,
-      avatar: user.avatar,
-      singlePlayerBattleId: user.singlePlayerBattleId,
-      multiPlayerBattleIds: user.multiPlayerBattleIds,
+      avatar: user.avatar ?? null,
+      singlePlayerBattleId: user.singlePlayerBattleId ?? null,
+      multiPlayerBattleIds: user.multiPlayerBattleIds ?? [],
       leagueLevel: user.leagueLevel,
-      unlockedPokemon: user.unlockedPokemon,
+      unlockedPokemon: user.unlockedPokemon ?? defaultUnlockedPokemon,
       isAdmin: user.isAdmin,
-      settings: user.settings,
-      previousArenaTrainers: user.previousArenaTrainers,
+      settings: user.settings ?? {},
+      previousArenaTrainers: user.previousArenaTrainers ?? [],
     };
+
     const userJson = JSON.stringify(userWithoutSecrets);
-    logDAO(`PostgreSQL saveUser() user=${userJson}`);
+
     if (!user.username) {
       throw new Error("username is required");
     }
-    await pool.query(`
-      INSERT INTO pmba.user
+
+    await pool.query(
+      `
+      INSERT INTO pmba.user (username, hashed_password, salt, json)
       VALUES ($1, $2, $3, $4)
       ON CONFLICT (username)
-      DO
-      UPDATE SET json=$4
-    `, [
-      user.username,
-      user.hashed_password,
-      user.salt,
-      userJson,
-    ]);
+      DO UPDATE SET json=$4
+    `,
+      [user.username, user.hashed_password, user.salt, userJson]
+    );
   }
 
-  async findUser(username: string, includeSecrets: boolean = false) {
-    logDAO(`PostgreSQL findUser() username=${username}`);
-    if (!username) {
-      throw new Error("Username is null");
-    }
-    const res = await pool.query(`
+  async findUser(username: string, includeSecrets = false): Promise<User | undefined> {
+    logDAO(`Finding user: ${username}`);
+    const res = await pool.query(
+      `
       SELECT json, salt, hashed_password
       FROM pmba.user
       WHERE upper(username) = $1
-    `, [
-      username.toUpperCase(),
-    ]);
+    `,
+      [username.toUpperCase()]
+    );
+
     if (res.rowCount > 0) {
       const row = res.rows[0];
       const user: User = JSON.parse(row.json);
-      if (!user.unlockedPokemon?.length) {
-        user.unlockedPokemon = defaultUnlockedPokemon;
-      }
+
       if (includeSecrets) {
         user.salt = row.salt;
         user.hashed_password = row.hashed_password;
       }
+
       return user;
-    } else {
-      logDAO("No user found with username " + username);
     }
+    logDAO(`User not found: ${username}`);
   }
 
-  async findAllUsers(): Promise<User[]> {
-    logDAO(`Find PostgreSQL findAllUsers()`);
-    const res = await pool.query(`
-      SELECT json
-      FROM pmba.user
-    `);
-    return res.rows.map(row => {
-      return JSON.parse(row.json);
-    });
+  async deleteAllBattles() {
+    logDAO("Deleting all battles...");
+    await pool.query(`DELETE FROM pmba.battle`);
   }
 
   async saveBattle(battle: Battle) {
     const battleJson = JSON.stringify(battle.getData());
-    logDAO(`PostgreSQL saveBattle() battleId=${battle.battleId}`);
+    logDAO(`Saving battle: ${battle.battleId}`);
+
     if (!battle.battleId) {
       throw new Error("battleId is required");
     }
 
-    await pool.query(`
-      INSERT INTO pmba.battle
+    await pool.query(
+      `
+      INSERT INTO pmba.battle (battle_id, json)
       VALUES ($1, $2)
       ON CONFLICT (battle_id)
-      DO
-      UPDATE SET json=$2
-    `, [
-      battle.battleId,
-      battleJson,
-    ]);
+      DO UPDATE SET json=$2
+    `,
+      [battle.battleId, battleJson]
+    );
   }
 
-  async findBattle(battleId: string): Promise<Battle | undefined> {
-    logDAO(`PostgreSQL findBattle() battleId=${battleId}`);
-    const res = await pool.query(`
-      SELECT json
-      FROM pmba.battle
-      WHERE battle_id = $1
-    `, [
-      battleId,
-    ]);
-    if (res.rowCount > 0) {
-      const row = res.rows[0];
-      const data = JSON.parse(row.json);
-      return new Battle(data);
-    } else {
-      logDAO("No battle found with battleId " + battleId);
-    }
+  async findAllUsers(): Promise<User[]> {
+    logDAO("Finding all users...");
+    const res = await pool.query(`SELECT json FROM pmba.user`);
+    return res.rows.map((row) => JSON.parse(row.json));
   }
-
-  async deleteAllBattles() {
-    await pool.query(`
-      DELETE
-      FROM pmba.battle
-    `);
-  }
-
-  async saveChallenge(challenge: Challenge) {
-    logDAO(`PostgreSQL saveChallenge() challengeId=${challenge.challengeId}`);
-    const challengeJson = JSON.stringify(challenge);
-    await pool.query(`
-      INSERT INTO pmba.challenge
-      VALUES ($1, $2)
-      ON CONFLICT (challenge_id)
-      DO
-      UPDATE SET json=$2
-    `, [
-      challenge.challengeId,
-      challengeJson,
-    ]);
-  }
-
-  async findChallenge(challengeId: string) {
-    logDAO(`PostgreSQL findChallenge() challengeId=${challengeId}`);
-    const res = await pool.query(`
-      SELECT json
-      FROM pmba.challenge
-      WHERE challenge_id = $1
-    `, [
-      challengeId,
-    ]);
-    if (res.rowCount > 0) {
-      const row = res.rows[0];
-      const challenge = JSON.parse(row.json);
-      return challenge;
-    } else {
-      logDAO("No challenge found with challengeId " + challengeId);
-    }
-  }
-      }
+}
