@@ -75,15 +75,15 @@ export class PostgresDAO implements DAO {
     logDAO("Database schema, tables initialized, previous arena trainers reset, and admin user created");
   }
 
-  async createAdminUser(username, password) {
+  async createAdminUser(username: string, password: string) {
     logDAO(`Creating admin user: ${username}`);
     const salt = crypto.randomBytes(16);
     const hashedPassword = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512");
 
     const user: User = {
       username,
-      avatar: null, // Set default avatar if required
-      singlePlayerBattleId: null,
+      avatar: undefined, // Use undefined instead of null
+      singlePlayerBattleId: undefined, // Use undefined instead of null
       multiPlayerBattleIds: [],
       leagueLevel: 1, // Default league level
       unlockedPokemon: defaultUnlockedPokemon, // Default unlocked Pokémon
@@ -94,18 +94,16 @@ export class PostgresDAO implements DAO {
 
     const userJson = JSON.stringify(user);
 
-    await pool.query(`
+    await pool.query(
+      `
       INSERT INTO pmba.user (username, hashed_password, salt, json)
       VALUES ($1, $2, $3, $4)
       ON CONFLICT (username)
       DO
       UPDATE SET hashed_password = $2, salt = $3, json = $4
-    `, [
-      username,
-      hashedPassword,
-      salt,
-      userJson,
-    ]);
+    `,
+      [username, hashedPassword, salt, userJson]
+    );
     logDAO(`Admin user ${username} created or updated successfully`);
   }
 
@@ -256,4 +254,4 @@ export class PostgresDAO implements DAO {
       logDAO("No challenge found with challengeId " + challengeId);
     }
   }
-                                    }
+      }
