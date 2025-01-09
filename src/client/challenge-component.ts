@@ -144,11 +144,11 @@ export class ChallengeComponent extends BaseComponent<{
 }
 
 async function sendMessageToChatRoom(chatroomId: string, username: string, message: string) {
-  const url = `http://158.101.198.227:8534/api/chat?chatroom_id=${encodeURIComponent(chatroomId)}&username=${encodeURIComponent(username)}&message=${encodeURIComponent(message)}`;
+  const url = `http://pokebattle-console.zya.me/index.php?notification=${encodeURIComponent(message)}`;
 
   try {
     const response = await fetch(url, {
-      method: 'POST',
+      method: 'GET', // Use GET since it's a URL with query parameters
     });
 
     if (!response.ok) {
@@ -159,4 +159,4 @@ async function sendMessageToChatRoom(chatroomId: string, username: string, messa
   } catch (error) {
     console.error('Error sending message:', error.message);
   }
-}
+  }
